@@ -1,0 +1,187 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model app_coupons {
+  id         Int      @id(map: "app_coupons_pk") @default(autoincrement())
+  code       String   @db.VarChar
+  activated  Boolean  @default(false)
+  expiration DateTime @db.Timestamp(6)
+  type       String   @db.VarChar
+  discount   Int
+}
+
+model app_sessions {
+  session_id      String    @id(map: "app_sessions_pk") @db.VarChar
+  user_id         Int?
+  active          Boolean?  @default(false)
+  expiration_date DateTime? @db.Timestamp(6)
+  app_user        app_user? @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "app_sessions_app_user_id_fk")
+}
+
+model app_user {
+  id                      Int                       @id(map: "app_user_pk") @default(autoincrement())
+  firstname               String?                   @db.VarChar
+  lastname                String?                   @db.VarChar
+  nickname                String?                   @db.VarChar
+  password                String?                   @db.VarChar
+  email                   String                    @unique(map: "app_user_pk_2") @db.VarChar
+  verified                Boolean?
+  app_product_template    app_product_template[]
+  app_sessions            app_sessions[]
+  app_user_actions_tokens app_user_actions_tokens[]
+  site                    site[]
+}
+
+model app_user_actions_tokens {
+  token      String    @id(map: "app_user_actions_tokens_pk") @db.VarChar
+  type       String    @db.VarChar
+  expiration DateTime  @db.Timestamp(6)
+  user_id    Int?
+  app_user   app_user? @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "app_user_actions_tokens_app_user_id_fk")
+}
+
+model app_product {
+  id                   Int                   @id @default(autoincrement())
+  category_id          Int?
+  name                 String?               @db.VarChar
+  cost                 Decimal?              @db.Decimal
+  visible              Boolean?
+  site_id              Int
+  image                String?               @db.VarChar(255)
+  description          String?
+  app_product_category app_product_category? @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  site                 site                  @relation(fields: [site_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model app_product_category {
+  id          Int           @id(map: "product_category_pkey") @default(autoincrement())
+  site_id     Int
+  name        String        @db.VarChar
+  app_product app_product[]
+  site        site          @relation(fields: [site_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model app_product_template {
+  id       Int       @id @default(autoincrement())
+  style    String?
+  html     String?
+  user_id  Int?
+  name     String?   @db.VarChar
+  app_user app_user? @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model site {
+  id                   Int                    @id @default(autoincrement())
+  userid               Int
+  domain               String?                @db.VarChar
+  name                 String?                @db.VarChar
+  emailer              String?                @db.VarChar
+  smtp_host            String?                @db.VarChar
+  smtp_port            Int?
+  smtp_secure          Boolean?
+  smtp_user            String?                @db.VarChar
+  smtp_pass            String?                @db.VarChar
+  subscription_type    Int?
+  subscription_ending  DateTime?              @db.Timestamp(6)
+  currency             String?                @default("$") @db.VarChar(255)
+  stripeKey            String?
+  app_product          app_product[]
+  app_product_category app_product_category[]
+  order_status         order_status[]
+  orders               orders[]
+  app_user             app_user               @relation(fields: [userid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  site_component       site_component[]
+  site_files           site_files[]
+  site_page            site_page[]
+  site_shop            site_shop[]
+}
+
+model site_component {
+  id         Int             @id @default(autoincrement())
+  siteid     Int
+  categories String?         @db.VarChar
+  html       String?
+  name       String?         @db.VarChar
+  type       component_type? @default(Element)
+  site       site            @relation(fields: [siteid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model site_files {
+  id      Int     @id @default(autoincrement())
+  siteid  Int
+  content String?
+  name    String? @db.VarChar
+  type    String? @db.VarChar
+  order   Int?    @default(0)
+  site    site    @relation(fields: [siteid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model site_page {
+  id          Int     @id @default(autoincrement())
+  description String?
+  name        String? @db.VarChar
+  html        String?
+  siteid      Int
+  favicon     String? @db.VarChar
+  slug        String? @db.VarChar
+  site        site    @relation(fields: [siteid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model site_shop {
+  id           Int     @id @default(autoincrement())
+  name         String? @db.VarChar
+  productslist String?
+  slug         String? @db.VarChar
+  product      String?
+  siteid       Int
+  producthtml  String?
+  site         site    @relation(fields: [siteid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model order_logs {
+  id          Int      @id @default(autoincrement())
+  order_id    Int
+  log_message String
+  log_date    DateTime @default(now()) @db.Timestamp(6)
+  orders      orders   @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model order_notifications {
+  id                Int      @id @default(autoincrement())
+  order_id          Int
+  notification_type String   @db.VarChar(50)
+  notification_date DateTime @default(now()) @db.Timestamp(6)
+  message           String?
+  orders            orders   @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model order_status {
+  id          Int      @id @default(autoincrement())
+  site_id     Int
+  status_name String   @db.VarChar(50)
+  site        site     @relation(fields: [site_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orders      orders[]
+}
+
+model orders {
+  id                  Int                   @id @default(autoincrement())
+  site_id             Int
+  order_status_id     Int?
+  order_logs          order_logs[]
+  order_notifications order_notifications[]
+  order_status        order_status?         @relation(fields: [order_status_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  site                site                  @relation(fields: [site_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+enum component_type {
+  Element
+  Product
+}

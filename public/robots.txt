@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://tidytime.ztomas.eu/sitemap.xml
